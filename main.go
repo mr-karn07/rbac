@@ -29,7 +29,7 @@ func main() {
 
 	enforcerMiddleware := auth.NewEnforcerMiddleware(enforcer)
 
-	// Periodically reload policies
+	// Periodically reload policies to load all newly added policies
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute) // Can be adjusted as per requirement
 		defer ticker.Stop()
@@ -52,47 +52,57 @@ func main() {
 		return c.Next()
 	})
 
-	// API to create a new resource and assign the creator as admin
+	// API to assign a role to a user for a resource along with action
 	app.Post("/resource", func(c *fiber.Ctx) error {
-		resource := c.FormValue("resource")
-		user := c.FormValue("user")
-		// Assign the user as admin of the new resource
-		_, err := enforcer.AddPolicy(user, resource, "admin")
+		req := struct {
+			Resource string `json:"resource"`
+			User     string `json:"user"`
+			Role     string `json:"role"`
+			Action   string `json:"action"`
+		}{}
+		err := c.BodyParser(&req)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to assign admin role"})
+			return err
 		}
-		return c.JSON(fiber.Map{"message": "Resource created and admin role assigned"})
-	})
-
-	// API to assign a role to a user for a resource
-	app.Post("/resource/:resource/assign", func(c *fiber.Ctx) error {
-		resource := c.Params("resource")
-		user := c.FormValue("user")
-		role := c.FormValue("role")
 		// Assign the specified role to the user for the resource
-		_, err := enforcer.AddPolicy(user, resource, role)
+		_, err = enforcer.AddPolicy(req.User, req.Role, req.Resource, req.Action)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to assign role"})
 		}
-		return c.JSON(fiber.Map{"message": "Role assigned successfully"})
+		return c.JSON(fiber.Map{"message": "Resouce created and Role assigned successfully"})
 	})
 
 	app.Use(enforcerMiddleware.Middleware)
 
 	// Sample resource access APIs
-	app.Get("/resource/view", func(c *fiber.Ctx) error {
-		fmt.Println("hi, i am back here in the view handler")
-		return c.JSON(fiber.Map{"message": "Resource viewed"})
+	app.Post("/datascience/create-pipeline", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /datascience/create-pipeline handler")
+		return c.JSON(fiber.Map{"message": "pipeline created"})
 	})
 
-	app.Post("/resource/edit", func(c *fiber.Ctx) error {
-		fmt.Println("hi, i am back here in the edit handler")
-		return c.JSON(fiber.Map{"message": "Resource edited"})
+	app.Get("/datascience/get-pipeline", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /datascience/get-pipeline handler")
+		return c.JSON(fiber.Map{"message": "pipeline viewed"})
 	})
 
-	app.Delete("/resource/delete", func(c *fiber.Ctx) error {
-		fmt.Println("hi, i am back here in the delete handler")
-		return c.JSON(fiber.Map{"message": "Resource deleted"})
+	app.Delete("/datascience/delete-pipeline", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /datascience/delete-pipeline handler")
+		return c.JSON(fiber.Map{"message": "pipeline deleted"})
+	})
+
+	app.Get("/developer", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /developer handler")
+		return c.JSON(fiber.Map{"message": "developer fetched"})
+	})
+
+	app.Get("/core", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /core handler")
+		return c.JSON(fiber.Map{"message": "core fetched"})
+	})
+
+	app.Get("/infra", func(c *fiber.Ctx) error {
+		fmt.Println("hi, i am back here in the /infra handler ")
+		return c.JSON(fiber.Map{"message": "infra fetched"})
 	})
 
 	log.Fatal(app.Listen(":3000"))

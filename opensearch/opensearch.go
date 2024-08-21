@@ -103,7 +103,7 @@ func (a *Adapter) AddPolicy(sec string, ptype string, rule []string) error {
 		policy.V5 = rule[5]
 	}
 
-	documentID := fmt.Sprintf("%s:%s:%s", policy.V0, policy.V1, policy.V2)
+	documentID := fmt.Sprintf("%s:%s:%s:%s", policy.V0, policy.V1, policy.V2, policy.V3)
 	documentID = strings.ReplaceAll(documentID, "/", "_")
 
 	policyJSON, err := json.Marshal(policy)

@@ -80,3 +80,40 @@ The `config` package provides functions for loading configuration values.
 3. **Run Your Application**:
     Import and use the packages in your application as needed.
 
+4. **sample policies for testing**:
+    user:
+      u1: 
+        role: default
+      u2: 
+        role: admin
+      u3: 
+        role: clusterAdmin
+
+
+    role:
+      default:
+        - path: /datascience
+          method: *
+        - path: /developer
+          method: *
+        - path: /infra
+          method: GET
+      admin:
+        - path: /datascience
+          method: *
+        - path: /developer
+          method: *
+        - path: /infra
+          method: *
+        - path: /core
+          method: GET
+      clusterAdmin:
+        - path: /datascience
+          method: *
+        - path: /developer
+          method: *
+        - path: /infra
+          method: *
+        - path: /core
+          method: *
+

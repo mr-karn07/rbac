@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -21,27 +22,25 @@ func NewEnforcerMiddleware(enforcer *casbin.Enforcer) *EnforcerMiddleware {
 
 // Middleware checks the user's access permissions
 func (e *EnforcerMiddleware) Middleware(c *fiber.Ctx) error {
+	// Extract user information
 	user, err := extractUser(c)
 	if err != nil {
 		return c.Status(http.StatusUnauthorized).SendString("Unauthorized")
 	}
 
-	resource := c.Query("resource")
+	// Extract role from fiber context header "X-User-Role"
+	role := extractRole(c)
 
-	action := determineAction(c.Method())
+	// Extract resource starting from the first "/" up to the end of the first segment
+	resource := extractResource(c)
 
-	// First, check if the user is an admin for the resource
-	isAdmin, err := e.Enforcer.Enforce(user, resource, "admin")
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).SendString("Error enforcing policy")
-	}
-	if isAdmin {
-		return c.Next() // Admins are allowed access to all actions
-	}
+	// Extract method from fiber context
+	action := c.Method()
 
 	// Then, check if the user has the appropriate role for the resource and action
-	allowed, err := e.Enforcer.Enforce(user, resource, action)
+	allowed, err := e.Enforcer.Enforce(user, role, resource, action)
 	if err != nil {
+		fmt.Println(err)
 		return c.Status(http.StatusInternalServerError).SendString("Error enforcing policy")
 	}
 	if allowed {
@@ -49,20 +48,6 @@ func (e *EnforcerMiddleware) Middleware(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusForbidden).SendString("Forbidden")
-}
-
-// determineAction maps HTTP methods to actions
-func determineAction(method string) string {
-	switch method {
-	case http.MethodGet:
-		return "viewer"
-	case http.MethodPost, http.MethodPut, http.MethodPatch:
-		return "editor"
-	case http.MethodDelete:
-		return "delete"
-	default:
-		return "unknown"
-	}
 }
 
 // extractUser extracts the user credentials from the Basic Auth header
@@ -84,4 +69,17 @@ func extractUser(c *fiber.Ctx) (string, error) {
 	}
 
 	return parts[0], nil
+}
+
+// extractRole role from fiber context header "X-User-Role"
+func extractRole(c *fiber.Ctx) string {
+	xAuthRole := c.Get("X-User-Role")
+	return xAuthRole
+}
+
+// extractResource resource starting from the first "/" up to the end of the first segment
+func extractResource(c *fiber.Ctx) string {
+	pathSegments := strings.SplitN(c.Path(), "/", 3)
+	resource := "/" + pathSegments[1]
+	return resource
 }
